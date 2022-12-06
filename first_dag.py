@@ -6,6 +6,8 @@ from random import randint
 import os
 from airflow.models import Variable
 from airflow.hooks.base_hook import BaseHook
+from airflow.sensors.python import PythonSensor
+
 
 def db():
     conn = BaseHook.get_connection('pg')
@@ -40,19 +42,24 @@ def sum_calc():
         print("=========", file=f)
         print(summ, file=f)
 
+def should_continue(**kwargs):
+    filename = Variable.get("filename")
+    os.path.exists(filename)
+    
+
 date_start=datetime.now() - timedelta(minutes=120)
 date_end=datetime.now() + timedelta(minutes=6)
 with DAG(dag_id="first_dag", start_date=date_start, max_active_runs=5, schedule="*/1 * * * *") as dag:
-#with DAG(dag_id="first_dag", 
-#         default_args={
-#              "depends_on_past": True,
-#              "retries": 5,
-#              "retry_delay": timedelta(minutes=1)},
-#         start_date=date_start,
-#         schedule="*/5 * * * *"
-#         ) as dag:
     bash_task = BashOperator(task_id="hello", bash_command="echo hello")
     python_task = PythonOperator(task_id="world", python_callable = hello)
     generator_task = PythonOperator(task_id="random_generator", python_callable = random_generator)
     sum_task = PythonOperator(task_id="sum_calc", python_callable = sum_calc)
-    bash_task >> python_task >> generator_task >> sum_task
+        
+    sens = PythonSensor(
+       task_id='waiting_for_file',
+       poke_interval=30,
+       python_callable=lambda *args, **kwargs: should_continue(),
+       dag=dag
+       )
+    bash_task >> python_task >> generator_task >> sum_task 
+    sens >> sum_task
