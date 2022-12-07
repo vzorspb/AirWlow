@@ -14,6 +14,11 @@ def db():
 
 def hello():
     print("Airflow")
+
+def start_counter():
+    print("Airflow")
+#    xcom_push("start_counter", 1)    
+    
 def random_generator():
     filename = Variable.get("filename")
     try:
@@ -43,21 +48,26 @@ def sum_calc():
         print(summ, file=f)
 
 def should_continue(**kwargs):
+
     filename = Variable.get("filename")
-    os.path.exists(filename)
+    if os.path.exists(filename):
+        return True
+    else:
+        return False
     
 
 date_start=datetime.now() - timedelta(minutes=120)
 date_end=datetime.now() + timedelta(minutes=6)
-with DAG(dag_id="first_dag", start_date=date_start, max_active_runs=5, schedule="*/1 * * * *") as dag:
-    bash_task = BashOperator(task_id="hello", bash_command="echo hello")
-    python_task = PythonOperator(task_id="world", python_callable = hello)
-    generator_task = PythonOperator(task_id="random_generator", python_callable = random_generator)
-    sum_task = PythonOperator(task_id="sum_calc", python_callable = sum_calc)
-        
+with DAG(dag_id="first_dag", start_date=date_start, max_active_runs=5, schedule="*/15 * * * *") as dag:
+    bash_task = BashOperator(task_id="BashOperator", bash_command="echo hello")
+    python_task = PythonOperator(task_id="PythonOperator", python_callable = hello)
+    generator_task = PythonOperator(task_id="RandomGenerator", python_callable = random_generator)
+    sum_task = PythonOperator(task_id="SummCalculator", python_callable = sum_calc)
+    counter = PythonOperator(task_id="StartCounter", python_callable = start_counter)
+
     sens = PythonSensor(
-       task_id='waiting_for_file',
-       poke_interval=30,
+       task_id='WaitingForFile',
+       poke_interval=10,
        python_callable=lambda *args, **kwargs: should_continue(),
        dag=dag
        )
