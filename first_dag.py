@@ -1,3 +1,7 @@
+# перед запуском надо завести Variable
+#   fшlename = <путь и имя файла для хранения данных>
+#   counter = 0 (счетчик количества запусков)
+
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
