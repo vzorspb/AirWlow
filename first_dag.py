@@ -16,8 +16,8 @@ def hello():
     print("Airflow")
 
 def start_counter():
-    print("Airflow")
-#    xcom_push("start_counter", 1)    
+    counter = int(Variable.get("counter"))
+    Variable.set("counter", counter + 1)
     
 def random_generator():
     filename = Variable.get("filename")
