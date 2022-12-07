@@ -28,7 +28,7 @@ def random_generator():
     try:
         with open(filename, "r+") as  f:
             for line in f:
-                if line[0:1] == "=":
+                if line[0] == "=":
                     os.system('sed -i "$ d" {0}'.format(filename))
                     os.system('sed -i "$ d" {0}'.format(filename))               
                     break
@@ -40,9 +40,12 @@ def random_generator():
             print(*lst, sep=" ", file=f)
 def sum_calc():
     filename = Variable.get("filename")
+    counter = int(Variable.get("counter"))
+    st = 0
     with open(filename, "r+") as  f:
         summ = [0, 0]
         for line in f:
+            st=st+1
             line = line.split()
             line = list(map(int, line))
             summ=map(sum, zip(summ,line))
@@ -50,7 +53,9 @@ def sum_calc():
         summ=summ[0]-summ[1]
         print("=========", file=f)
         print(summ, file=f)
-
+        if st!=counter:
+            raise ValueError('Lines count error '+str(st)+" "+str(counter))
+            
 def should_continue(**kwargs):
 
     filename = Variable.get("filename")
@@ -68,6 +73,7 @@ with DAG(dag_id="first_dag", start_date=date_start, max_active_runs=5, schedule=
     generator_task = PythonOperator(task_id="RandomGenerator", python_callable = random_generator)
     sum_task = PythonOperator(task_id="SummCalculator", python_callable = sum_calc)
     counter = PythonOperator(task_id="StartCounter", python_callable = start_counter)
+    pg_task = PythonOperator(task_id="PostgeSQL", python_callable = db)
 
     sens = PythonSensor(
        task_id='WaitingForFile',
@@ -75,5 +81,5 @@ with DAG(dag_id="first_dag", start_date=date_start, max_active_runs=5, schedule=
        python_callable=lambda *args, **kwargs: should_continue(),
        dag=dag
        )
-    bash_task >> python_task >> generator_task >> sum_task 
+    bash_task >> python_task >> generator_task >> sum_task >> pg_task
     sens >> sum_task
